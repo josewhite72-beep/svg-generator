@@ -7,7 +7,7 @@ const DPR = 3; // factor de render para que las tarjetas salgan nitidas al impri
 const PAGE_W = 210, PAGE_H = 297; // A4 en mm
 const MARGIN = 10, GUTTER = 4;
 
-const VOCAB_W = 420;
+const IMG_SIZE = 512; // tamano logico (cuadrado) de cada imagen-asset generada
 const LESSON_W = 640;
 const MODULE_W = 640;
 
@@ -24,17 +24,11 @@ const COLORS = {
 const TAB_CYCLE = [COLORS.kraft, COLORS.sage, COLORS.stamp, COLORS.ink];
 
 const FONTS = {
-  word: "bold 26px Georgia, 'Times New Roman', serif",
-  phonetic: "15px 'Courier New', monospace",
-  pos: "italic 13px Georgia, 'Times New Roman', serif",
-  body: "15px Arial, Helvetica, sans-serif",
-  example: "italic 13.5px Arial, Helvetica, sans-serif",
   title: "bold 27px Georgia, 'Times New Roman', serif",
   subtitle: "14px Arial, Helvetica, sans-serif",
   label: "bold 11px Arial, Helvetica, sans-serif",
   item: "14.5px Arial, Helvetica, sans-serif",
   row: "15px Arial, Helvetica, sans-serif",
-  num: "bold 15px Georgia, 'Times New Roman', serif",
 };
 
 const SAMPLE_TEXT = {
@@ -63,6 +57,7 @@ const state = {
   type: "vocab",
   inputMode: "file",
   rawText: "",
+  words: [], // {word, definition} - lista editable antes de generar imagenes (modo vocab)
   cards: [], // {svg, pxW, pxH, label}
 };
 
@@ -113,19 +108,32 @@ function clearLog() {
    UI: TABS DE TIPO
    ============================================================ */
 const TYPE_HINTS = {
-  vocab: "Una palabra por linea: palabra | definicion | ejemplo (la IA completa lo que falte).",
+  vocab: "Una palabra por linea: palabra | definicion | ejemplo. La IA extrae la lista de palabras; despues podras editarla antes de generar las imagenes.",
   lesson: "Un solo plan de leccion: titulo, objetivos y contenido (en cualquier formato libre).",
   module: "Varias lecciones juntas; la IA las separa automaticamente.",
 };
+const GENERATE_BTN_LABEL = {
+  vocab: ["Extraer", "vocabulario"],
+  lesson: ["Generar", "tarjeta"],
+  module: ["Generar", "modulo"],
+};
+function setGenerateBtnLabel() {
+  const [l1, l2] = GENERATE_BTN_LABEL[state.type];
+  document.getElementById("generateBtnL1").textContent = l1;
+  document.getElementById("generateBtnL2").textContent = l2;
+}
 document.querySelectorAll("#typeTabs .tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll("#typeTabs .tab-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     state.type = btn.dataset.type;
     document.getElementById("typeHint").textContent = TYPE_HINTS[state.type];
+    setGenerateBtnLabel();
+    document.getElementById("wordListSection").style.display = "none";
   });
 });
 document.getElementById("typeHint").textContent = TYPE_HINTS.vocab;
+setGenerateBtnLabel();
 
 /* ============================================================
    UI: MODO DE ENTRADA (archivo / pegar texto)
@@ -175,9 +183,50 @@ document.getElementById("clearBtn").addEventListener("click", () => {
   updateDropzoneLabel();
   document.getElementById("pasteText").value = "";
   state.cards = [];
+  state.words = [];
+  document.getElementById("wordListSection").style.display = "none";
+  document.getElementById("wordChips").innerHTML = "";
   clearLog();
   document.getElementById("resultsSection").style.display = "none";
   document.getElementById("resultsGrid").innerHTML = "";
+});
+
+/* ============================================================
+   LISTA EDITABLE DE PALABRAS (modo vocab)
+   ============================================================ */
+function renderWordChips() {
+  const wrap = document.getElementById("wordChips");
+  wrap.innerHTML = "";
+  state.words.forEach((w, i) => {
+    const chip = document.createElement("div");
+    chip.className = "word-chip";
+    const span = document.createElement("span");
+    span.textContent = w.word;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "\u2715";
+    btn.title = "Quitar";
+    btn.addEventListener("click", () => {
+      state.words.splice(i, 1);
+      renderWordChips();
+    });
+    chip.appendChild(span);
+    chip.appendChild(btn);
+    wrap.appendChild(chip);
+  });
+  document.getElementById("wordListSection").style.display = state.words.length ? "" : "none";
+}
+
+document.getElementById("addWordBtn").addEventListener("click", () => {
+  const input = document.getElementById("newWordInput");
+  const val = input.value.trim();
+  if (!val) return;
+  state.words.push({ word: val, definition: "" });
+  input.value = "";
+  renderWordChips();
+});
+document.getElementById("newWordInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); document.getElementById("addWordBtn").click(); }
 });
 
 /* ============================================================
@@ -367,91 +416,6 @@ function canvasToSvgImage(canvas, logicalW, logicalH) {
     '<image href="' + dataUrl + '" x="0" y="0" width="' + logicalW + '" height="' + logicalH + '"/>' +
     "</svg>";
   return { svg, pxW: logicalW, pxH: logicalH };
-}
-
-/* ============================================================
-   TARJETA: VOCABULARIO
-   ============================================================ */
-function layoutVocabCard(w) {
-  const W = VOCAB_W;
-  const padX = 28;
-  const maxTextW = W - padX * 2;
-  const defLines = wrapTextPx(w.definition || "", maxTextW, FONTS.body);
-  const exLines = wrapTextPx(w.example || "", maxTextW, FONTS.example);
-
-  let y = 50;
-  const tabY = 14;
-  const wordY = (y += 36);
-  const phonY = (y += 26);
-  const ruleY = (y += 22);
-  const posY = (y += 28);
-  y += 14;
-  const defStartY = y;
-  y += defLines.length * 23 + 16;
-  const exStartY = y;
-  y += exLines.length * 20 + 30;
-
-  return { W, H: Math.max(260, y), tabY, wordY, phonY, ruleY, posY, defStartY, exStartY, defLines, exLines, padX };
-}
-
-function drawVocabCard(wordObj, idx, forcedH) {
-  const L = layoutVocabCard(wordObj);
-  if (forcedH) L.H = forcedH;
-  const canvas = document.createElement("canvas");
-  canvas.width = L.W * DPR;
-  canvas.height = L.H * DPR;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(DPR, DPR);
-
-  // fondo
-  roundedRect(ctx, 0, 0, L.W, L.H, 16);
-  ctx.fillStyle = COLORS.paper;
-  ctx.fill();
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = COLORS.ink;
-  roundedRect(ctx, 1, 1, L.W - 2, L.H - 2, 15);
-  ctx.stroke();
-
-  // tab de color
-  const tabColor = TAB_CYCLE[idx % TAB_CYCLE.length];
-  roundedRect(ctx, L.padX, L.tabY, 64, 9, 3);
-  ctx.fillStyle = tabColor;
-  ctx.fill();
-
-  ctx.textBaseline = "alphabetic";
-
-  ctx.font = FONTS.word;
-  ctx.fillStyle = COLORS.ink;
-  ctx.fillText(wordObj.word || "", L.padX, L.wordY);
-
-  if (wordObj.phonetic) {
-    ctx.font = FONTS.phonetic;
-    ctx.fillStyle = COLORS.inkSoft;
-    ctx.fillText(wordObj.phonetic, L.padX, L.phonY);
-  }
-
-  ctx.strokeStyle = COLORS.line;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(L.padX, L.ruleY);
-  ctx.lineTo(L.W - L.padX, L.ruleY);
-  ctx.stroke();
-
-  if (wordObj.pos) {
-    ctx.font = FONTS.pos;
-    ctx.fillStyle = COLORS.inkFaint;
-    ctx.fillText("[" + wordObj.pos + "]", L.padX, L.posY);
-  }
-
-  ctx.font = FONTS.body;
-  ctx.fillStyle = COLORS.ink;
-  L.defLines.forEach((line, i) => ctx.fillText(line, L.padX, L.defStartY + i * 23));
-
-  ctx.font = FONTS.example;
-  ctx.fillStyle = COLORS.inkSoft;
-  L.exLines.forEach((line, i) => ctx.fillText(line, L.padX, L.exStartY + i * 20));
-
-  return canvasToSvgImage(canvas, L.W, L.H);
 }
 
 /* ============================================================
@@ -737,38 +701,94 @@ generateBtn.addEventListener("click", async () => {
     const data = await callGroq(SYSTEM_PROMPTS[state.type], rawText, apiKey, model);
     log("Datos extraidos correctamente.", "ok");
 
-    log("Dibujando tarjetas...");
-    const cards = [];
     if (state.type === "vocab") {
       const words = data.words || [];
       if (!words.length) throw new Error("La IA no devolvio palabras de vocabulario.");
-      // primera pasada: render normal, luego unificar a la altura maxima para una cuadricula prolija
-      const drafts = words.map((w, i) => ({ w, i, L: layoutVocabCard(w) }));
-      const maxH = Math.max(...drafts.map((d) => d.L.H));
-      drafts.forEach((d) => {
-        const card = drawVocabCard(d.w, d.i, maxH);
-        cards.push({ ...card, label: d.w.word || "palabra " + (d.i + 1) });
-      });
+      state.words = words.map((w) => ({ word: w.word, definition: w.definition || "" }));
+      renderWordChips();
+      log("Lista lista para revisar abajo: quita o agrega palabras y luego genera las imagenes.", "ok");
     } else if (state.type === "lesson") {
+      log("Dibujando tarjeta...");
       const card = drawLessonCard(data, 0);
-      cards.push({ ...card, label: data.title || "Leccion" });
+      state.cards = [{ ...card, label: data.title || "Leccion" }];
+      renderResults(state.cards);
+      log("Listo: 1 tarjeta generada.", "ok");
     } else {
+      log("Dibujando tarjetas...");
+      const cards = [];
       const overview = drawModuleOverview(data);
       cards.push({ ...overview, label: data.title || "Modulo (portada)" });
       (data.lessons || []).forEach((l, i) => {
         const card = drawLessonCard(l, i);
         cards.push({ ...card, label: l.title || "Leccion " + (i + 1) });
       });
+      state.cards = cards;
+      renderResults(cards);
+      log("Listo: " + cards.length + " tarjeta(s) generada(s).", "ok");
     }
-
-    state.cards = cards;
-    renderResults(cards);
-    log("Listo: " + cards.length + " tarjeta(s) generada(s).", "ok");
   } catch (err) {
     console.error(err);
     log("Error: " + err.message, "err");
   } finally {
     generateBtn.disabled = false;
+  }
+});
+
+/* ============================================================
+   IMAGEN-ASSET (Puter.js) - modo vocab
+   ============================================================ */
+function buildImagePrompt(w) {
+  let p = 'Simple flat colorful cartoon/comic-style illustration of "' + w.word + '"';
+  if (w.definition) p += " (" + w.definition + ")";
+  p += ". Centered single subject, clean comic asset style, plain background, no text, no letters, no watermark, no signature.";
+  return p;
+}
+
+function drawImageCard(imgEl) {
+  const canvas = document.createElement("canvas");
+  canvas.width = IMG_SIZE * DPR;
+  canvas.height = IMG_SIZE * DPR;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(DPR, DPR);
+  // "cover" fit: recorta al centro para llenar el cuadro sin deformar la imagen
+  const iw = imgEl.naturalWidth || imgEl.width;
+  const ih = imgEl.naturalHeight || imgEl.height;
+  const scale = Math.max(IMG_SIZE / iw, IMG_SIZE / ih);
+  const dw = iw * scale, dh = ih * scale;
+  ctx.drawImage(imgEl, (IMG_SIZE - dw) / 2, (IMG_SIZE - dh) / 2, dw, dh);
+  return canvasToSvgImage(canvas, IMG_SIZE, IMG_SIZE);
+}
+
+document.getElementById("generateImagesBtn").addEventListener("click", async () => {
+  if (!state.words.length) { log("No hay palabras en la lista.", "err"); return; }
+  if (!window.puter || !window.puter.ai || !window.puter.ai.txt2img) {
+    log("Puter.js todavia no ha cargado. Espera un momento e intenta de nuevo.", "err");
+    return;
+  }
+  document.getElementById("resultsGrid").innerHTML = "";
+  document.getElementById("resultsSection").style.display = "none";
+  state.cards = [];
+  const btn = document.getElementById("generateImagesBtn");
+  btn.disabled = true;
+  clearLog();
+  try {
+    const cards = [];
+    for (let i = 0; i < state.words.length; i++) {
+      const w = state.words[i];
+      log("Generando imagen " + (i + 1) + "/" + state.words.length + ": " + w.word + " ...");
+      const prompt = buildImagePrompt(w);
+      const imgEl = await window.puter.ai.txt2img(prompt, { model: "gemini-2.5-flash-image-preview" });
+      const card = drawImageCard(imgEl);
+      cards.push({ ...card, label: w.word });
+    }
+    state.cards = cards;
+    renderResults(cards);
+    log("Listo: " + cards.length + " imagen(es) generada(s).", "ok");
+  } catch (err) {
+    console.error(err);
+    log("Error generando imagenes: " + err.message, "err");
+  } finally {
+    btn.disabled = false;
   }
 });
 

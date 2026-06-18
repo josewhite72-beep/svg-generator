@@ -210,6 +210,20 @@
   .card-thumb .meta{padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:6px;}
   .card-thumb .meta span{font-size:11.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
+  .word-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .word-chip{
+    display:flex;align-items:center;gap:6px;
+    background:var(--paper-deep);border:1.5px solid var(--ink);border-radius:20px;
+    padding:6px 8px 6px 14px;font-size:13.5px;
+  }
+  .word-chip button{
+    border:none;background:var(--stamp);color:#fff;border-radius:50%;
+    width:20px;height:20px;font-size:13px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .add-word-row{display:flex;gap:8px;margin-bottom:6px;}
+  .add-word-row input{flex:1;}
+
   footer.app-footer{text-align:center;color:var(--ink-soft);font-size:12px;margin-top:36px;}
   .visually-hidden{position:absolute;left:-9999px;top:-9999px;}
 
@@ -286,24 +300,37 @@
 
   <div class="generate-row">
     <button class="stamp-btn" id="generateBtn">
-      <span class="l1">Generar</span>
-      <span class="l2">tarjetas</span>
+      <span class="l1" id="generateBtnL1">Generar</span>
+      <span class="l2" id="generateBtnL2">tarjetas</span>
     </button>
     <button class="btn btn-ghost" id="clearBtn" type="button">Empezar de nuevo</button>
   </div>
 
   <pre id="statusLog"></pre>
 
+  <!-- LISTA EDITABLE DE VOCABULARIO (solo modo vocab, antes de generar imagenes) -->
+  <section class="card-panel" id="wordListSection" style="display:none;">
+    <span class="tab-label">Revisa antes de generar</span>
+    <h2>Palabras detectadas</h2>
+    <div class="word-chips" id="wordChips"></div>
+    <div class="add-word-row">
+      <input type="text" id="newWordInput" placeholder="Agregar otra palabra...">
+      <button class="btn btn-small" id="addWordBtn" type="button">Agregar</button>
+    </div>
+    <p class="hint">Quita las que no quieras (✕) o agrega las que falten. Cada palabra de esta lista se convierte en una imagen.</p>
+    <button class="btn" id="generateImagesBtn" style="margin-top:8px;">Generar imágenes (Puter.js)</button>
+  </section>
+
   <!-- RESULTADOS -->
   <section id="resultsSection" style="display:none;">
     <div class="results-header">
-      <h2 style="font-family:'Special Elite',monospace;font-size:15px;margin:0;">Tarjetas generadas (<span id="cardCount">0</span>)</h2>
+      <h2 style="font-family:'Special Elite',monospace;font-size:15px;margin:0;">Resultados (<span id="cardCount">0</span>)</h2>
       <button class="btn" id="downloadPdfBtn">Descargar hoja PDF</button>
     </div>
     <div class="results-grid" id="resultsGrid"></div>
   </section>
 
-  <footer class="app-footer">PanaMentorLabs &middot; Generador SVG &middot; funciona offline excepto la extraccion con IA</footer>
+  <footer class="app-footer">PanaMentorLabs &middot; Generador SVG &middot; funciona offline excepto la extraccion con IA y la generacion de imagenes</footer>
 </div>
 
 <div id="svgSandbox" class="visually-hidden" aria-hidden="true"></div>
@@ -312,6 +339,9 @@
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.0/mammoth.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.7.0/dist/svg2pdf.umd.min.js"></script>
+
+<!-- Puter.js: generacion de imagenes IA, sin API key (la cuenta gratuita del usuario cubre el costo) -->
+<script src="https://js.puter.com/v2/"></script>
 
 <!-- pdf.js ya solo se distribuye como modulo ES; lo cargamos asi y lo exponemos como global -->
 <script type="module">
