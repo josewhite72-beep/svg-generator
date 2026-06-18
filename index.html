@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Generador SVG — PanaMentorLabs</title>
+<meta name="description" content="Convierte vocabulario, planes de leccion y modulos en tarjetas SVG y hojas PDF listas para imprimir.">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="theme-color" content="#20303d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#20303d;
+    --ink-soft:#3c4f5e;
+    --paper:#efe6d3;
+    --paper-deep:#e4d8bc;
+    --kraft:#c99a52;
+    --stamp:#a23b2b;
+    --sage:#5c7a5e;
+    --line:#b8ac8e;
+    --paper-text:#fbf8f0;
+    --radius:14px;
+    --shadow:0 2px 0 rgba(32,48,61,.08), 0 10px 24px rgba(32,48,61,.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(32,48,61,.05) 1px, transparent 0);
+    background-size:18px 18px;
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+    padding-bottom:48px;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:18px 16px 0;}
+  header.app-header{
+    display:flex;align-items:center;gap:14px;
+    padding:10px 4px 18px;
+    border-bottom:2px solid var(--ink);
+    margin-bottom:22px;
+  }
+  .stamp-mark{
+    width:46px;height:46px;border-radius:50%;
+    border:3px solid var(--stamp);
+    display:flex;align-items:center;justify-content:center;
+    transform:rotate(-8deg);
+    flex:none;
+  }
+  .stamp-mark span{font-family:'Special Elite',monospace;color:var(--stamp);font-size:13px;font-weight:700;}
+  header.app-header h1{
+    font-family:'Special Elite',monospace;
+    font-size:21px;
+    margin:0;
+    letter-spacing:.5px;
+  }
+  header.app-header p{margin:4px 0 0;font-size:13px;color:var(--ink-soft);}
+
+  .card-panel{
+    background:var(--paper-text);
+    border:1.5px solid var(--ink);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px;
+    margin-bottom:18px;
+    position:relative;
+  }
+  .tab-label{
+    position:absolute;top:-12px;left:18px;
+    background:var(--kraft);
+    color:#fff;
+    font-family:'Special Elite',monospace;
+    font-size:11px;
+    letter-spacing:.6px;
+    padding:4px 10px;
+    border-radius:6px;
+    text-transform:uppercase;
+    box-shadow:0 2px 4px rgba(0,0,0,.15);
+  }
+  .card-panel h2{
+    font-family:'Special Elite',monospace;
+    font-size:15px;
+    margin:6px 0 12px;
+    color:var(--ink);
+  }
+  label.field-label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  input[type=password], input[type=text], textarea{
+    width:100%;
+    border:1.5px solid var(--line);
+    border-radius:9px;
+    padding:10px 12px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    background:#fff;
+    color:var(--ink);
+  }
+  textarea{font-family:'Inter',sans-serif;font-size:14px;resize:vertical;min-height:140px;}
+  input:focus, textarea:focus{outline:2px solid var(--kraft);outline-offset:1px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+  .row > *{flex:1;min-width:160px;}
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    border:1.5px solid var(--ink);
+    border-radius:9px;
+    padding:10px 16px;
+    background:#fff;
+    color:var(--ink);
+    cursor:pointer;
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 3px 0 rgba(32,48,61,.15);}
+  .btn:active{transform:translateY(1px);}
+  .btn-flex{flex:none;}
+  .btn-ghost{background:transparent;}
+  .btn-small{font-size:12.5px;padding:6px 10px;border-radius:7px;}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .tab-btn{
+    flex:1;min-width:120px;
+    font-family:'Special Elite',monospace;
+    font-size:12.5px;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    padding:10px 8px;
+    border:1.5px solid var(--ink);
+    border-bottom:none;
+    border-radius:8px 8px 0 0;
+    background:var(--paper-deep);
+    color:var(--ink-soft);
+    cursor:pointer;
+    text-align:center;
+  }
+  .tab-btn.active{background:var(--ink);color:var(--paper-text);}
+
+  .mode-toggle{display:flex;gap:6px;margin-bottom:12px;}
+  .mode-toggle button{
+    flex:1;border:1.5px solid var(--line);border-radius:8px;background:#fff;
+    padding:8px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;
+  }
+  .mode-toggle button.active{border-color:var(--ink);color:var(--ink);background:var(--paper-deep);}
+
+  .dropzone{
+    border:2px dashed var(--line);
+    border-radius:10px;
+    padding:22px 14px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .dropzone.drag{border-color:var(--kraft);background:#fffaf0;}
+  .dropzone input{display:none;}
+  .filename-chip{
+    display:inline-block;margin-top:8px;padding:4px 10px;border-radius:20px;
+    background:var(--sage);color:#fff;font-size:12px;font-family:'JetBrains Mono',monospace;
+  }
+
+  .generate-row{display:flex;align-items:center;gap:14px;margin:18px 0 6px;flex-wrap:wrap;}
+  .stamp-btn{
+    font-family:'Special Elite',monospace;
+    font-size:16px;letter-spacing:.5px;text-transform:uppercase;
+    background:var(--stamp);color:#fff;
+    border:none;border-radius:50%;
+    width:118px;height:118px;
+    transform:rotate(-5deg);
+    cursor:pointer;
+    box-shadow:0 4px 0 rgba(0,0,0,.18);
+    transition:transform .12s ease;
+  }
+  .stamp-btn:hover{transform:rotate(-5deg) scale(1.04);}
+  .stamp-btn:active{transform:rotate(-5deg) scale(.94);}
+  .stamp-btn:disabled{background:#9b9489;cursor:not-allowed;}
+  .stamp-btn .l1{display:block;font-size:17px;}
+  .stamp-btn .l2{display:block;font-size:11px;opacity:.85;}
+
+  #statusLog{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    background:var(--ink);
+    color:#d8e3ea;
+    border-radius:10px;
+    padding:12px 14px;
+    min-height:20px;
+    white-space:pre-wrap;
+    display:none;
+  }
+  #statusLog.show{display:block;}
+  #statusLog .err{color:#f3a8a0;}
+  #statusLog .ok{color:#9fd6ad;}
+
+  .results-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  .results-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(160px,1fr));
+    gap:14px;
+  }
+  .card-thumb{
+    background:#fff;border:1.5px solid var(--ink);border-radius:10px;
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .card-thumb img{width:100%;display:block;background:#fff;}
+  .card-thumb .meta{padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:6px;}
+  .card-thumb .meta span{font-size:11.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  footer.app-footer{text-align:center;color:var(--ink-soft);font-size:12px;margin-top:36px;}
+  .visually-hidden{position:absolute;left:-9999px;top:-9999px;}
+
+  @media (max-width:480px){
+    .stamp-btn{width:96px;height:96px;}
+    header.app-header h1{font-size:18px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="app-header">
+    <div class="stamp-mark"><span>SVG</span></div>
+    <div>
+      <h1>Generador SVG</h1>
+      <p>Vocabulario, planes y modulos &rarr; tarjetas descargables y hojas PDF</p>
+    </div>
+  </header>
+
+  <!-- API KEY -->
+  <section class="card-panel">
+    <span class="tab-label">Clave API</span>
+    <h2>Groq API</h2>
+    <div class="row">
+      <div>
+        <label class="field-label" for="apiKey">API key (se guarda solo en este dispositivo)</label>
+        <input type="password" id="apiKey" placeholder="gsk_...">
+      </div>
+      <div>
+        <label class="field-label" for="modelName">Modelo</label>
+        <input type="text" id="modelName" value="openai/gpt-oss-120b">
+      </div>
+      <button class="btn btn-flex" id="saveKeyBtn">Guardar</button>
+    </div>
+    <p class="hint" id="keyStatus">Tu clave se guarda en este dispositivo (localStorage) y nunca se envia a ningun servidor distinto de Groq.</p>
+  </section>
+
+  <!-- TIPO -->
+  <section class="card-panel">
+    <span class="tab-label">Tipo de contenido</span>
+    <h2>¿Que vas a generar?</h2>
+    <div class="tabs" id="typeTabs">
+      <button class="tab-btn active" data-type="vocab">Vocabulario</button>
+      <button class="tab-btn" data-type="lesson">Plan de leccion</button>
+      <button class="tab-btn" data-type="module">Modulo</button>
+    </div>
+    <p class="hint" id="typeHint"></p>
+  </section>
+
+  <!-- ENTRADA -->
+  <section class="card-panel">
+    <span class="tab-label">Documento fuente</span>
+    <h2>Importar contenido</h2>
+    <div class="mode-toggle">
+      <button class="active" data-mode="file">Subir archivo (.docx / .pdf)</button>
+      <button data-mode="paste">Pegar texto</button>
+    </div>
+
+    <div id="fileInputArea">
+      <label class="dropzone" id="dropzone" for="fileInput">
+        <div id="dropzoneText">Toca para elegir un archivo Word o PDF<br>o arrastralo aqui</div>
+        <input type="file" id="fileInput" accept=".docx,.pdf,.txt">
+      </label>
+    </div>
+
+    <div id="pasteInputArea" style="display:none;">
+      <textarea id="pasteText" placeholder="Pega aqui el texto de tu vocabulario, plan o modulo..."></textarea>
+    </div>
+
+    <p class="hint">¿Quieres probar la app primero? <button class="btn btn-small btn-ghost" id="sampleBtn" type="button">Usar texto de ejemplo</button></p>
+  </section>
+
+  <div class="generate-row">
+    <button class="stamp-btn" id="generateBtn">
+      <span class="l1">Generar</span>
+      <span class="l2">tarjetas</span>
+    </button>
+    <button class="btn btn-ghost" id="clearBtn" type="button">Empezar de nuevo</button>
+  </div>
+
+  <pre id="statusLog"></pre>
+
+  <!-- RESULTADOS -->
+  <section id="resultsSection" style="display:none;">
+    <div class="results-header">
+      <h2 style="font-family:'Special Elite',monospace;font-size:15px;margin:0;">Tarjetas generadas (<span id="cardCount">0</span>)</h2>
+      <button class="btn" id="downloadPdfBtn">Descargar hoja PDF</button>
+    </div>
+    <div class="results-grid" id="resultsGrid"></div>
+  </section>
+
+  <footer class="app-footer">PanaMentorLabs &middot; Generador SVG &middot; funciona offline excepto la extraccion con IA</footer>
+</div>
+
+<div id="svgSandbox" class="visually-hidden" aria-hidden="true"></div>
+
+<!-- Librerias (UMD, scripts clasicos) -->
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.7.0/dist/svg2pdf.umd.min.js"></script>
+
+<!-- pdf.js ya solo se distribuye como modulo ES; lo cargamos asi y lo exponemos como global -->
+<script type="module">
+  import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/build/pdf.min.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/build/pdf.worker.min.mjs";
+  window.pdfjsLib = pdfjsLib;
+</script>
+
+<script src="./app.js"></script>
+</body>
+</html>

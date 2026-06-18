@@ -1,0 +1,15 @@
+{
+  "name": "Generador SVG \u2014 PanaMentorLabs",
+  "short_name": "SVG Gen",
+  "description": "Convierte vocabulario, planes de lecci\u00f3n y m\u00f3dulos en tarjetas SVG descargables y hojas PDF listas para imprimir.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efe6d3",
+  "theme_color": "#20303d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
