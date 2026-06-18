@@ -8,31 +8,32 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<meta name="theme-color" content="#20303d">
+<meta name="theme-color" content="#322f63">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#20303d;
-    --ink-soft:#3c4f5e;
-    --paper:#efe6d3;
-    --paper-deep:#e4d8bc;
-    --kraft:#c99a52;
-    --stamp:#a23b2b;
-    --sage:#5c7a5e;
-    --line:#b8ac8e;
-    --paper-text:#fbf8f0;
+    --ink:#322f63;
+    --ink-soft:#5f5a92;
+    --paper:#eaf2fb;
+    --paper-deep:#dde6fb;
+    --kraft:#5b9bf0;
+    --stamp:#9b7ff0;
+    --sage:#4fb8c4;
+    --line:#c9d3f0;
+    --paper-text:#ffffff;
     --radius:14px;
-    --shadow:0 2px 0 rgba(32,48,61,.08), 0 10px 24px rgba(32,48,61,.10);
+    --shadow:0 2px 0 rgba(50,47,99,.08), 0 10px 24px rgba(50,47,99,.10);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:var(--paper);
+    background-color:var(--paper);
     background-image:
-      radial-gradient(circle at 1px 1px, rgba(32,48,61,.05) 1px, transparent 0);
-    background-size:18px 18px;
+      linear-gradient(160deg, #e7f1fd 0%, #eef0fb 55%, #f2edfc 100%),
+      radial-gradient(circle at 1px 1px, rgba(50,47,99,.05) 1px, transparent 0);
+    background-size:auto, 18px 18px;
     color:var(--ink);
     font-family:'Inter',system-ui,-apple-system,sans-serif;
     min-height:100vh;
@@ -156,7 +157,7 @@
     font-size:13.5px;
     cursor:pointer;
   }
-  .dropzone.drag{border-color:var(--kraft);background:#fffaf0;}
+  .dropzone.drag{border-color:var(--kraft);background:#eef6ff;}
   .dropzone input{display:none;}
   .filename-chip{
     display:inline-block;margin-top:8px;padding:4px 10px;border-radius:20px;

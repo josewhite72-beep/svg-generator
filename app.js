@@ -12,14 +12,14 @@ const LESSON_W = 640;
 const MODULE_W = 640;
 
 const COLORS = {
-  ink: "#20303d",
-  inkSoft: "rgba(32,48,61,.72)",
-  inkFaint: "rgba(32,48,61,.45)",
-  paper: "#fbf8f0",
-  line: "#cdbf9d",
-  kraft: "#c99a52",
-  stamp: "#a23b2b",
-  sage: "#5c7a5e",
+  ink: "#322f63",
+  inkSoft: "rgba(50,47,99,.72)",
+  inkFaint: "rgba(50,47,99,.45)",
+  paper: "#f8f7ff",
+  line: "#d6ddf5",
+  kraft: "#5b9bf0",
+  stamp: "#9b7ff0",
+  sage: "#4fb8c4",
 };
 const TAB_CYCLE = [COLORS.kraft, COLORS.sage, COLORS.stamp, COLORS.ink];
 
@@ -119,8 +119,10 @@ const GENERATE_BTN_LABEL = {
 };
 function setGenerateBtnLabel() {
   const [l1, l2] = GENERATE_BTN_LABEL[state.type];
-  document.getElementById("generateBtnL1").textContent = l1;
-  document.getElementById("generateBtnL2").textContent = l2;
+  const elL1 = document.getElementById("generateBtnL1");
+  const elL2 = document.getElementById("generateBtnL2");
+  if (elL1) elL1.textContent = l1;
+  if (elL2) elL2.textContent = l2;
 }
 document.querySelectorAll("#typeTabs .tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -217,17 +219,23 @@ function renderWordChips() {
   document.getElementById("wordListSection").style.display = state.words.length ? "" : "none";
 }
 
-document.getElementById("addWordBtn").addEventListener("click", () => {
-  const input = document.getElementById("newWordInput");
-  const val = input.value.trim();
-  if (!val) return;
-  state.words.push({ word: val, definition: "" });
-  input.value = "";
-  renderWordChips();
-});
-document.getElementById("newWordInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); document.getElementById("addWordBtn").click(); }
-});
+const addWordBtnEl = document.getElementById("addWordBtn");
+const newWordInputEl = document.getElementById("newWordInput");
+if (addWordBtnEl) {
+  addWordBtnEl.addEventListener("click", () => {
+    const input = document.getElementById("newWordInput");
+    const val = input.value.trim();
+    if (!val) return;
+    state.words.push({ word: val, definition: "" });
+    input.value = "";
+    renderWordChips();
+  });
+}
+if (newWordInputEl) {
+  newWordInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); if (addWordBtnEl) addWordBtnEl.click(); }
+  });
+}
 
 /* ============================================================
    LECTURA DE ARCHIVOS
@@ -759,7 +767,8 @@ function drawImageCard(imgEl) {
   return canvasToSvgImage(canvas, IMG_SIZE, IMG_SIZE);
 }
 
-document.getElementById("generateImagesBtn").addEventListener("click", async () => {
+const generateImagesBtnEl = document.getElementById("generateImagesBtn");
+if (generateImagesBtnEl) generateImagesBtnEl.addEventListener("click", async () => {
   if (!state.words.length) { log("No hay palabras en la lista.", "err"); return; }
   if (!window.puter || !window.puter.ai || !window.puter.ai.txt2img) {
     log("Puter.js todavia no ha cargado. Espera un momento e intenta de nuevo.", "err");
