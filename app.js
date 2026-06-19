@@ -66,6 +66,9 @@ const state = {
    ============================================================ */
 const LS_KEY = "svgen_api_key";
 const LS_MODEL = "svgen_model";
+const LS_HF_TOKEN = "svgen_hf_token";
+const LS_HF_MODEL = "svgen_hf_model";
+const LS_IMG_PROVIDER = "svgen_img_provider";
 
 function loadSavedConfig() {
   const key = localStorage.getItem(LS_KEY) || "";
@@ -75,6 +78,20 @@ function loadSavedConfig() {
   document.getElementById("keyStatus").textContent = key
     ? "Clave guardada en este dispositivo (" + key.slice(0, 6) + "...)."
     : "Tu clave se guarda en este dispositivo (localStorage) y nunca se envia a ningun servidor distinto de Groq.";
+
+  const hfToken = localStorage.getItem(LS_HF_TOKEN) || "";
+  const hfModel = localStorage.getItem(LS_HF_MODEL) || "black-forest-labs/FLUX.1-schnell";
+  document.getElementById("hfToken").value = hfToken;
+  document.getElementById("hfModel").value = hfModel;
+  document.getElementById("hfStatus").textContent = hfToken
+    ? "Token guardado en este dispositivo (" + hfToken.slice(0, 6) + "...)."
+    : "Tu token se guarda solo en este dispositivo.";
+
+  const provider = localStorage.getItem(LS_IMG_PROVIDER) || "puter";
+  document.querySelectorAll("#imgProviderToggle button").forEach((b) => {
+    b.classList.toggle("active", b.dataset.provider === provider);
+  });
+  document.getElementById("hfFields").style.display = provider === "hf" ? "" : "none";
 }
 
 document.getElementById("saveKeyBtn").addEventListener("click", () => {
@@ -85,6 +102,27 @@ document.getElementById("saveKeyBtn").addEventListener("click", () => {
   document.getElementById("keyStatus").textContent = key
     ? "Clave guardada en este dispositivo (" + key.slice(0, 6) + "...)."
     : "Clave borrada.";
+});
+
+const saveHfBtnEl = document.getElementById("saveHfBtn");
+if (saveHfBtnEl) saveHfBtnEl.addEventListener("click", () => {
+  const token = document.getElementById("hfToken").value.trim();
+  const model = document.getElementById("hfModel").value.trim() || "black-forest-labs/FLUX.1-schnell";
+  localStorage.setItem(LS_HF_TOKEN, token);
+  localStorage.setItem(LS_HF_MODEL, model);
+  document.getElementById("hfStatus").textContent = token
+    ? "Token guardado en este dispositivo (" + token.slice(0, 6) + "...)."
+    : "Token borrado.";
+});
+
+document.querySelectorAll("#imgProviderToggle button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#imgProviderToggle button").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    const provider = btn.dataset.provider;
+    localStorage.setItem(LS_IMG_PROVIDER, provider);
+    document.getElementById("hfFields").style.display = provider === "hf" ? "" : "none";
+  });
 });
 
 /* ============================================================
@@ -743,13 +781,66 @@ generateBtn.addEventListener("click", async () => {
 });
 
 /* ============================================================
-   IMAGEN-ASSET (Puter.js) - modo vocab
+   IMAGEN-ASSET (Puter.js o Hugging Face) - modo vocab
    ============================================================ */
 function buildImagePrompt(w) {
   let p = 'Simple flat colorful cartoon/comic-style illustration of "' + w.word + '"';
   if (w.definition) p += " (" + w.definition + ")";
   p += ". Centered single subject, clean comic asset style, plain background, no text, no letters, no watermark, no signature.";
   return p;
+}
+
+function blobToImage(blob) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("No se pudo decodificar la imagen recibida."));
+    img.src = url;
+  });
+}
+
+async function callHuggingFaceImage(prompt, token, model) {
+  const url = "https://api-inference.huggingface.co/models/" + model;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ inputs: prompt }),
+    });
+    if (res.ok) {
+      const blob = await res.blob();
+      return await blobToImage(blob);
+    }
+    if (res.status === 503) {
+      let wait = 5000;
+      try {
+        const data = await res.json();
+        if (data.estimated_time) wait = Math.min(20000, Math.ceil(data.estimated_time * 1000) + 500);
+      } catch (e) { /* ignora si no vino JSON */ }
+      log("Modelo cargando en Hugging Face, esperando " + Math.round(wait / 1000) + "s...");
+      await new Promise((r) => setTimeout(r, wait));
+      continue;
+    }
+    const errText = await res.text();
+    throw new Error("Hugging Face (" + res.status + "): " + errText.slice(0, 200));
+  }
+  throw new Error("El modelo de Hugging Face sigue cargando. Intenta de nuevo en un minuto.");
+}
+
+async function generateOneImage(prompt) {
+  const activeBtn = document.querySelector("#imgProviderToggle button.active");
+  const provider = activeBtn ? activeBtn.dataset.provider : "puter";
+  if (provider === "hf") {
+    const token = document.getElementById("hfToken").value.trim();
+    const model = document.getElementById("hfModel").value.trim() || "black-forest-labs/FLUX.1-schnell";
+    if (!token) throw new Error("Falta tu token de Hugging Face (guardalo arriba primero).");
+    return await callHuggingFaceImage(prompt, token, model);
+  }
+  if (!window.puter || !window.puter.ai || !window.puter.ai.txt2img) {
+    throw new Error("Puter.js todavia no ha cargado. Espera un momento e intenta de nuevo.");
+  }
+  return await window.puter.ai.txt2img(prompt, { model: "gemini-2.5-flash-image-preview" });
 }
 
 function drawImageCard(imgEl) {
@@ -770,35 +861,32 @@ function drawImageCard(imgEl) {
 const generateImagesBtnEl = document.getElementById("generateImagesBtn");
 if (generateImagesBtnEl) generateImagesBtnEl.addEventListener("click", async () => {
   if (!state.words.length) { log("No hay palabras en la lista.", "err"); return; }
-  if (!window.puter || !window.puter.ai || !window.puter.ai.txt2img) {
-    log("Puter.js todavia no ha cargado. Espera un momento e intenta de nuevo.", "err");
-    return;
-  }
   document.getElementById("resultsGrid").innerHTML = "";
   document.getElementById("resultsSection").style.display = "none";
   state.cards = [];
   const btn = document.getElementById("generateImagesBtn");
   btn.disabled = true;
   clearLog();
-  try {
-    const cards = [];
-    for (let i = 0; i < state.words.length; i++) {
-      const w = state.words[i];
-      log("Generando imagen " + (i + 1) + "/" + state.words.length + ": " + w.word + " ...");
+  let okCount = 0;
+  for (let i = 0; i < state.words.length; i++) {
+    const w = state.words[i];
+    log("Generando imagen " + (i + 1) + "/" + state.words.length + ": " + w.word + " ...");
+    try {
       const prompt = buildImagePrompt(w);
-      const imgEl = await window.puter.ai.txt2img(prompt, { model: "gemini-2.5-flash-image-preview" });
+      const imgEl = await generateOneImage(prompt);
       const card = drawImageCard(imgEl);
-      cards.push({ ...card, label: w.word });
+      state.cards.push({ ...card, label: w.word });
+      okCount++;
+      renderResults(state.cards); // se actualiza tras CADA imagen: nada se pierde si algo falla a mitad de camino
+    } catch (err) {
+      console.error(err);
+      log("Error en \"" + w.word + "\": " + err.message, "err");
+      log("Se detuvo aqui. Lo generado hasta ahora (" + okCount + ") esta guardado abajo; puedes descargarlo, o cambiar de proveedor arriba y tocar \"Generar imagenes\" otra vez (quita primero de la lista las palabras ya generadas).", "err");
+      break;
     }
-    state.cards = cards;
-    renderResults(cards);
-    log("Listo: " + cards.length + " imagen(es) generada(s).", "ok");
-  } catch (err) {
-    console.error(err);
-    log("Error generando imagenes: " + err.message, "err");
-  } finally {
-    btn.disabled = false;
   }
+  if (okCount === state.words.length) log("Listo: " + okCount + " imagen(es) generada(s).", "ok");
+  btn.disabled = false;
 });
 
 /* ============================================================
@@ -806,6 +894,7 @@ if (generateImagesBtnEl) generateImagesBtnEl.addEventListener("click", async () 
    ============================================================ */
 function renderResults(cards) {
   const grid = document.getElementById("resultsGrid");
+  grid.innerHTML = "";
   document.getElementById("cardCount").textContent = cards.length;
   cards.forEach((c, i) => {
     const div = document.createElement("div");
@@ -881,7 +970,11 @@ document.getElementById("downloadPdfBtn").addEventListener("click", async () => 
 /* ============================================================
    INICIO
    ============================================================ */
-loadSavedConfig();
+try {
+  loadSavedConfig();
+} catch (err) {
+  console.error("loadSavedConfig fallo (posible desajuste de cache):", err);
+}
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 }

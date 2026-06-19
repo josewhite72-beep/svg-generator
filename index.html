@@ -319,7 +319,21 @@
       <button class="btn btn-small" id="addWordBtn" type="button">Agregar</button>
     </div>
     <p class="hint">Quita las que no quieras (✕) o agrega las que falten. Cada palabra de esta lista se convierte en una imagen.</p>
-    <button class="btn" id="generateImagesBtn" style="margin-top:8px;">Generar imágenes (Puter.js)</button>
+
+    <div class="mode-toggle" id="imgProviderToggle" style="margin-top:14px;">
+      <button class="active" data-provider="puter">Puter.js (sin key)</button>
+      <button data-provider="hf">Hugging Face (con token)</button>
+    </div>
+    <div id="hfFields" style="display:none;">
+      <label class="field-label" for="hfToken">Token de Hugging Face (gratis en huggingface.co &rarr; Access Tokens)</label>
+      <input type="password" id="hfToken" placeholder="hf_...">
+      <label class="field-label" for="hfModel" style="margin-top:8px;">Modelo</label>
+      <input type="text" id="hfModel" value="black-forest-labs/FLUX.1-schnell">
+      <button class="btn btn-small" id="saveHfBtn" type="button" style="margin-top:6px;">Guardar</button>
+      <p class="hint" id="hfStatus">Tu token se guarda solo en este dispositivo.</p>
+    </div>
+
+    <button class="btn" id="generateImagesBtn" style="margin-top:14px;">Generar imágenes</button>
   </section>
 
   <!-- RESULTADOS -->
