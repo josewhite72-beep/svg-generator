@@ -984,6 +984,45 @@ document.getElementById("downloadPdfBtn").addEventListener("click", async () => 
 });
 
 /* ============================================================
+   DESCARGAR TODO EN ZIP (cada imagen ya como archivo separado)
+   ============================================================ */
+document.getElementById("downloadZipBtn").addEventListener("click", async () => {
+  if (!state.cards.length) return;
+  const btn = document.getElementById("downloadZipBtn");
+  btn.disabled = true;
+  btn.textContent = "Empaquetando...";
+  try {
+    const zip = new JSZip();
+    const usedNames = {};
+    state.cards.forEach((card) => {
+      let name = slugify(card.label) + ".svg";
+      if (usedNames[name] != null) {
+        usedNames[name]++;
+        name = slugify(card.label) + "-" + usedNames[name] + ".svg";
+      } else {
+        usedNames[name] = 0;
+      }
+      zip.file(name, card.svg);
+    });
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "imagenes-" + state.type + ".zip";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    log("Error empaquetando el ZIP: " + err.message, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Descargar todo (ZIP)";
+  }
+});
+
+/* ============================================================
    INICIO
    ============================================================ */
 try {

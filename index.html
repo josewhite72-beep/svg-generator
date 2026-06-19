@@ -340,7 +340,10 @@
   <section id="resultsSection" style="display:none;">
     <div class="results-header">
       <h2 style="font-family:'Special Elite',monospace;font-size:15px;margin:0;">Resultados (<span id="cardCount">0</span>)</h2>
-      <button class="btn" id="downloadPdfBtn">Descargar hoja PDF</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn" id="downloadZipBtn">Descargar todo (ZIP)</button>
+        <button class="btn" id="downloadPdfBtn">Descargar hoja PDF</button>
+      </div>
     </div>
     <div class="results-grid" id="resultsGrid"></div>
   </section>
@@ -352,6 +355,7 @@
 
 <!-- Librerias (UMD, scripts clasicos) -->
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.7.0/dist/svg2pdf.umd.min.js"></script>
 
