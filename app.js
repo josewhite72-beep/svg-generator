@@ -800,30 +800,39 @@ function blobToImage(blob) {
   });
 }
 
+function base64ToBlob(base64, contentType) {
+  const byteChars = atob(base64);
+  const byteNumbers = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+  return new Blob([new Uint8Array(byteNumbers)], { type: contentType || "image/jpeg" });
+}
+
 async function callHuggingFaceImage(prompt, token, model) {
-  const url = "https://api-inference.huggingface.co/models/" + model;
+  // Le habla a nuestra propia funcion /api/hf-image (mismo origen, sin CORS),
+  // que a su vez le habla a Hugging Face desde el servidor.
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const res = await fetch(url, {
+    const res = await fetch("/api/hf-image", {
       method: "POST",
-      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-      body: JSON.stringify({ inputs: prompt }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, model, token }),
     });
-    if (res.ok) {
-      const blob = await res.blob();
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      throw new Error("Respuesta invalida del servidor (" + res.status + "). ¿Se subio la carpeta api/hf-image.js a Vercel?");
+    }
+    if (res.ok && data.image_base64) {
+      const blob = base64ToBlob(data.image_base64, data.content_type);
       return await blobToImage(blob);
     }
-    if (res.status === 503) {
-      let wait = 5000;
-      try {
-        const data = await res.json();
-        if (data.estimated_time) wait = Math.min(20000, Math.ceil(data.estimated_time * 1000) + 500);
-      } catch (e) { /* ignora si no vino JSON */ }
+    if (res.status === 503 && data.estimated_time) {
+      const wait = Math.min(20000, Math.ceil(data.estimated_time * 1000) + 500);
       log("Modelo cargando en Hugging Face, esperando " + Math.round(wait / 1000) + "s...");
       await new Promise((r) => setTimeout(r, wait));
       continue;
     }
-    const errText = await res.text();
-    throw new Error("Hugging Face (" + res.status + "): " + errText.slice(0, 200));
+    throw new Error("Hugging Face (" + res.status + "): " + String(data.error || JSON.stringify(data)).slice(0, 200));
   }
   throw new Error("El modelo de Hugging Face sigue cargando. Intenta de nuevo en un minuto.");
 }
