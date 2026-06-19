@@ -832,7 +832,14 @@ async function callHuggingFaceImage(prompt, token, model) {
       await new Promise((r) => setTimeout(r, wait));
       continue;
     }
-    throw new Error("Hugging Face (" + res.status + "): " + String(data.error || JSON.stringify(data)).slice(0, 200));
+    function flattenDetail(d) {
+      if (!d) return "";
+      let s = d.message + (d.code ? " [" + d.code + "]" : "");
+      if (d.cause) s += " <- " + flattenDetail(d.cause);
+      return s;
+    }
+    const extra = data.detail ? flattenDetail(data.detail) : (data.cause || "");
+    throw new Error("Hugging Face (" + res.status + "): " + String(data.error || JSON.stringify(data)).slice(0, 150) + (extra ? " | " + extra : ""));
   }
   throw new Error("El modelo de Hugging Face sigue cargando. Intenta de nuevo en un minuto.");
 }
